@@ -79,7 +79,7 @@ pip install python-docx       # 可选，用于模板填充式 docx
 ├── requirements.md                  # 申报要求（可选）
 ├── applicant_profile.md             # 申请人信息（可选）
 ├── references/
-│   └── Template.docx                # 申请书模板（可选，影响 07/11）
+│   └── Template.docx                # 申请书模板（可选；11 会验证样式，缺失/不完整则用内置 default_reference.docx）
 ├── papers/
 │   ├── inbox/                       # 待精读论文
 │   └── proceeded/                   # 已精读论文
@@ -140,6 +140,7 @@ workflow/09_assemble/
 - 图片：07 规划 `figure_plan.yaml` 和 `codex_prompt_base`；08/writer 在正文中插入图片占位符，并可精调为 `codex_prompt_final`，最终由用户生成图片。
 - 表格：07 规划 `table_plan.yaml`；08/writer 根据列结构、行结构和数据来源自动生成 Markdown 表格，不把表格留给用户手填。
 - 引用：07 规划 `citation_plan.yaml` 和稳定 `{{cite:tag}}`；08/writer 使用 tag；09-assemble 按首次出现顺序替换为 `[1]`、`[2]` 并补充参考文献列表。
+- 标题编号：`proposal_state.yaml` 中 `config.document_format.template_heading_numbering` 默认为 `false`，表示 09-assemble 向 markdown 标题注入编号；只有模板 Heading 样式确实自带自动编号时才设为 `true`，让 09 输出干净标题。
 
 ## 两个模式
 

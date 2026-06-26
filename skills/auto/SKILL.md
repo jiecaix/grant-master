@@ -108,7 +108,7 @@ auto **独享** `./workflow/proposal_state.yaml` 的读写权限。其他 XX-nam
 | 06 | `workflow/06_helm/helm_result.yaml` | `helm_report.md`, `scheme_blueprint.yaml`, `decision_log.md`, `helm_result.yaml` | can_continue、方案状态 |
 | 07 | `workflow/07_outline/outline_result.yaml` | `outline_report.md`, `volume_budget.yaml`, `writing_units.yaml`, `source_allocation.yaml`, `figure_plan.yaml`, `table_plan.yaml`, `citation_plan.yaml`, `outline_state.yaml`, `outline_blueprint.yaml`, `context_bundle.yaml`, `outline_result.yaml` | total_units、blocked_units、figure/table/citation counts、quality scores |
 | 08 | `workflow/08_section_write/unit_result.yaml` | `unit_result.yaml` + 检查 outline_state 中 unit 状态 | 刚写完的 unit、剩余 pending 数、all_complete |
-| 09 | `workflow/09_assemble/assemble_result.yaml` | `proposal_draft.md`, `assemble_report.md`, `assemble_result.yaml` | 组装质量、heading 编号修复数 |
+| 09 | `workflow/09_assemble/assemble_result.yaml` | `proposal_draft.md`, `assemble_report.md`, `assemble_result.yaml` | 组装质量、heading 编号策略、heading 编号修复数 |
 | 10 | `workflow/10_review/review_result.yaml` | `review_report.md`, `review_result.yaml` | P0/P1/P2 计数、ready_for_output |
 | 11 | `workflow/11_output/output_result.yaml` | `proposal.docx`, `output_result.yaml` | 输出文件路径。**前置门禁**：`10_review/review_result.yaml` 必须存在且 `P0_count == 0` |
 
@@ -219,6 +219,13 @@ auto 接收的第一个用户消息，按以下优先级研判意图：
 调用对应的 `/XX-name-...` skill。auto **自身不执行阶段工作**——它将控制权交给对应的 XX-name skill。
 
 协作模式下，每个阶段执行前可简述"即将执行 grant-0X：...（一句话说明）"。
+
+执行 09-assemble 时，auto 必须读取 `config.document_format.template_heading_numbering`：
+
+- `false` 或字段缺失（默认）：按普通方式调用 09，09 将在 markdown 标题中注入编号。
+- `true`：调用 09 时明确传递 `--template-heading-numbering`（兼容含义等同于旧 `--no-numbers`），让 09 输出干净标题，编号交给 docx Heading 样式。
+
+auto 不得根据模板外观自行猜测该字段；它只使用配置值。
 
 ### 第 5 步：验证产出物完整性并更新状态
 

@@ -8,6 +8,12 @@ assembly:
   pdf_file: "workflow/09_assemble/proposal_draft.pdf"
   pdf_status: "generated"           # generated / skipped_weasyprint_unavailable / skipped_error
   pdf_page_count: 0
+  heading_numbering_policy:
+    template_heading_numbering: false      # false: 09 injects markdown numbers; true: reference docx Heading styles auto-number
+    source: "default"                      # default / auto_config / cli
+    markdown_numbers_required: true
+    markdown_numbers_injected: true
+    legacy_no_numbers_arg_used: false
   heading_numbers_injected: 0       # 安全网修复的缺失编号数
   citation_tags_replaced: 0
   bibliography_inserted: false

@@ -23,7 +23,7 @@ description: >
     ↓
 09_assemble（本 Skill）
   ├── 按 section tree 深度优先遍历，拼接所有 unit .md
-  ├── 注入标题编号（安全网）
+  ├── 按 template_heading_numbering 策略处理标题编号
   ├── 基础质量检查（标题层级、字数、术语一致性扫描、重复内容）
   ├── 输出完整的 proposal_draft.md
   ├── 输出 proposal_draft.pdf（pandoc → weasyprint）
@@ -103,7 +103,7 @@ workflow/07_outline/source_allocation.yaml   # 如需检查证据一致性
 
 1. 读取 outline_state.yaml 的 section tree，验证所有 unit 状态为 `written`；
 2. 按深度优先顺序拼接所有 unit .md 文件为 proposal_draft.md；
-3. 注入缺失的标题编号（安全网）；
+3. 按 `template_heading_numbering` 策略注入或跳过标题编号；
 4. 将 `{{cite:tag}}` 按首次出现顺序替换为 `[1]`、`[2]`，并在背景/研究现状后生成参考文献列表；
 5. 生成 proposal_draft.pdf（pandoc → HTML → weasyprint）；
 6. 执行基础质量检查并写入 assemble_report.md；
@@ -152,13 +152,22 @@ S01
   ...
 ```
 
-### 6.2 拼接方式与编号注入
+### 6.2 拼接方式与编号策略
 
 拼接时先写入一级标题 `# 申请书名称`（来源见 §6.1），再按 DFS 顺序拼接各 unit。
 
 每个 unit .md 文件的内容直接拼接。section 之间插入一个空行。unit 之间不额外插入分隔符（因为相邻 unit 的过渡已在写作时处理）。
 
-**heading_number 安全网**：拼接完成后，必须扫描 draft 中所有 markdown 标题行（`#` 开头的行），检查是否已含编号。若某标题缺少编号，从 section tree 中定位其所属 section，用 `heading_number`（由 `section_id` 去 "S" 前缀得到）注入：
+**标题编号策略宏**：`template_heading_numbering` 表示最终使用的 reference docx 的 Heading 1-4 样式是否自带自动编号。
+
+| 字段值 | 含义 | 09 行为 |
+|---|---|---|
+| `false` 或缺失 | 模板标题样式不自带编号 | 默认行为：向 markdown 标题注入编号 |
+| `true` | 模板 Heading 1-4 已绑定自动编号 | 跳过 markdown 编号注入，输出干净标题 |
+
+默认值必须视为 `false`。也就是说，除非用户或 auto 明确传入 `template_heading_numbering: true` / `--template-heading-numbering`，09 都要注入标题编号。
+
+当 `template_heading_numbering: false` 时，拼接完成后必须扫描 draft 中所有 markdown 标题行（`#` 开头的行），检查是否已含编号。若某标题缺少编号，从 section tree 中定位其所属 section，用 `heading_number`（由 `section_id` 去 "S" 前缀得到）注入：
 
 ```text
 修复前：## 项目名称与定位
@@ -189,18 +198,20 @@ S01
 | 某 unit 状态为 `blocked` | 同上 |
 | 某 unit 文件为空 | 记录警告，不插入占位 |
 
-### 6.4 标题编号注入（默认开启，可用 `--no-numbers` 关闭）
+### 6.4 标题编号注入策略
 
 08-section-write 输出的标题不带编号。编号由本阶段统一注入。
 
-**默认行为**：拼接完成后，扫描所有 markdown 标题行，从 section tree 中定位对应 section，推导 `heading_number`（`section_id` 去 "S" 前缀），注入编号：
+**默认行为（`template_heading_numbering: false`）**：拼接完成后，扫描所有 markdown 标题行，从 section tree 中定位对应 section，推导 `heading_number`（`section_id` 去 "S" 前缀），注入编号：
 
 ```text
 注入前：## 背景及研究意义
 注入后：## 1.2 背景及研究意义
 ```
 
-**关闭方式**：若用户指定 `--no-numbers`（如 `/grant-master:09-assemble --no-numbers`），跳过编号注入。标题保持干净，适用于后续靠 Word 自动编号（grant-11）的场景。
+**跳过方式**：仅当用户或 auto 明确指定 `--template-heading-numbering` / `template_heading_numbering: true` 时，跳过编号注入。标题保持干净，适用于 reference docx 的 Heading 样式已经自带自动编号的场景。
+
+`--no-numbers` 作为旧兼容参数保留，语义等同于 `--template-heading-numbering`。新文档和 auto 应优先使用 `--template-heading-numbering`，因为它表达的是“模板已经负责编号”，不是“不要编号”。
 
 注入逻辑详见 §8 第 2.5 步。
 
@@ -331,11 +342,11 @@ HTML('/tmp/proposal_full.html').write_pdf('workflow/09_assemble/proposal_draft.p
 提取 draft 中所有 markdown 标题（`#` 行），检查：
 
 - 标题层级是否从 1 开始、不跳级（如 L2 后直接 L4 即为跳级）
-- **编号是否已注入且正确**（若未使用 `--no-numbers`）：`# 1.`、`## 1.2`、`### 1.2.1` 应与 section tree 的 `heading_number` 一一对应
+- **编号是否已注入且正确**（若 `template_heading_numbering: false`）：`# 1.`、`## 1.2`、`### 1.2.1` 应与 section tree 的 `heading_number` 一一对应
 - 编号是否连续（如 `1.2.1` → `1.2.2` → `1.2.3`，不应跳跃）
 - 标题文字是否与 `outline_report.md` §3 的 section heading 一致（允许微调）
 - heading-only 的 section 是否正确只输出了一行标题
-- 若使用了 `--no-numbers`：确认标题不含编号（干净模式）
+- 若 `template_heading_numbering: true`：确认标题不含 markdown 编号（干净模式），编号交给 reference docx Heading 样式
 
 ### 7.3 跨 Unit 连贯性扫描
 
@@ -379,14 +390,16 @@ HTML('/tmp/proposal_full.html').write_pdf('workflow/09_assemble/proposal_draft.p
 3. 读取每个 unit 的 .md 文件内容
 4. 拼接为初始 draft
 
-### 第 2.5 步：注入标题编号（默认执行）
+### 第 2.5 步：处理标题编号策略
 
-1. 若用户指定了 `--no-numbers` → 跳过此步骤
-2. 扫描初始 draft 中所有 markdown 标题行
-3. 与 section tree 的 DFS 顺序一一对应
-4. 对每个标题行：从对应 section 推导 `heading_number`（`section_id` 去 "S" 前缀）
-5. 若标题行尚未以 `{heading_number} ` 开头，注入编号（`## 背景` → `## 1.2 背景`）
-6. 得到已注入标题编号的中间 draft，交给第 3 步处理 citation tag
+1. 读取调用参数中的 `template_heading_numbering`；若缺失，按 `false` 处理。
+2. 若用户指定了 `--template-heading-numbering` 或旧参数 `--no-numbers` → 视为 `template_heading_numbering: true`。
+3. 若 `template_heading_numbering: true` → 跳过 markdown 编号注入，并记录 `heading_numbering_policy.template_heading_numbering: true`。
+4. 若 `template_heading_numbering: false` → 扫描初始 draft 中所有 markdown 标题行。
+5. 与 section tree 的 DFS 顺序一一对应。
+6. 对每个标题行：从对应 section 推导 `heading_number`（`section_id` 去 "S" 前缀）。
+7. 若标题行尚未以 `{heading_number} ` 开头，注入编号（`## 背景` → `## 1.2 背景`）。
+8. 得到处理后的中间 draft，交给第 3 步处理 citation tag。
 
 ### 第 3 步：处理 citation tag 和参考文献
 
@@ -452,7 +465,8 @@ workflow/09_assemble/
   - workflow/09_assemble/proposal_draft.pdf（{已生成 / 跳过：weasyprint 不可用}）
 总字数：X 字（目标 Y 字，偏差 Z%）
 标题层级：最深 L{X}，{是/否}有跳级
-编号注入：修复 X 个缺失编号（或"无需修复"）
+标题编号策略：template_heading_numbering={true/false}；{由 09 注入 / 交给 reference docx 自动编号}
+编号注入：修复 X 个缺失编号（或"跳过：模板自带编号"）
 引用替换：替换 X 个 citation tag，参考文献条目 X 条，未知 tag X 个
 检查报告：workflow/09_assemble/assemble_report.md
 
@@ -468,7 +482,7 @@ workflow/09_assemble/
 
 1. 不修改任何 unit .md 文件；
 2. 严格按 section tree 的 DFS 顺序拼接；
-3. 标题编号安全网必须执行——不得让缺少编号的标题进入 draft；
+3. 标题编号策略必须执行：默认 `template_heading_numbering: false`，必须向 markdown 标题注入编号；只有明确为 `true` 时才允许输出干净标题；
 4. 基础检查必须全部执行，不得跳过；
 5. 缺失 unit 时 draft 仍生成（占位符预览），但 `can_continue` 必须设为 `false`，阻止 auto 进入 10-review；
 6. PDF 生成为可选（weasyprint 不可用时跳过，不阻塞）；

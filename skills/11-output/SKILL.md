@@ -2,8 +2,9 @@
 name: 11-output
 description: >
   中文项目申请书写作流程第 11 阶段工具：文档输出。
-  读取 09-assemble 的完整草稿 proposal_draft.md，使用 pandoc 和 Template.docx 作为样式参考，
-  转换为格式规范的 .docx 文件。用户无需手动调整格式——模板的字体、标题样式、页边距等自动继承。
+  读取 09-assemble 的完整草稿 proposal_draft.md，验证项目 Template.docx 的 pandoc 样式可用性，
+  然后使用项目 Template.docx 或 skill 内置 default_reference.docx 作为 reference-doc，
+  转换为格式规范的 .docx 文件。绝不回退到 pandoc 默认样式。
 
   当用户输入 /grant-master:11-output，或在 grant 工作流中审阅通过后需要输出最终 docx 时，使用本 Skill。
 
@@ -19,11 +20,12 @@ description: >
 
 ```text
 09_assemble（proposal_draft.md）
-  + references/Template.docx
+  + references/Template.docx（样式验证）
+  + skill references/default_reference.docx（fallback）
     ↓
 11_output（本 Skill）
   ├── 预处理 markdown（图片占位、表格）
-  ├── pandoc 转换（--reference-doc=Template.docx）
+  ├── pandoc 转换（--reference-doc=Template.docx 或 default_reference.docx）
   ├── 输出 proposal.docx
   ├── 后处理验证（字体、样式、页数）
   └── 输出 output_result.yaml
@@ -40,7 +42,9 @@ description: >
 ```text
 ./
 ├── references/
-│   └── Template.docx              # 申请书模板（读，作为样式参考）
+│   └── Template.docx              # 项目申请书模板（读，先做样式验证）
+├── skills/11-output/references/
+│   └── default_reference.docx     # skill 内置 fallback reference-doc（读）
 ├── workflow/
 │   ├── 09_assemble/
 │   │   └── proposal_draft.md      # 完整草稿（读，不修改）
@@ -64,13 +68,16 @@ description: >
 
 ```text
 workflow/09_assemble/proposal_draft.md    # 待转换的完整草稿
-./references/Template.docx                # 申请书模板（样式参考）
+./references/Template.docx                # 项目申请书模板（样式验证；完整时可作为 reference-doc）
+skills/11-output/references/default_reference.docx
+                                           # 内置 reference-doc；Template 缺失或样式不完整时使用
 ```
 
 ### L2：验证参考（默认必读）
 
 ```text
 workflow/07_outline/outline_report.md     # §4 体量预算（验证页数）
+workflow/09_assemble/assemble_result.yaml # 读取 heading_numbering_policy，确认 09 已处理标题编号策略
 workflow/10_review/review_result.yaml     # 确认审阅已通过（P0=0）
 ```
 
@@ -80,11 +87,12 @@ workflow/10_review/review_result.yaml     # 确认审阅已通过（P0=0）
 
 ### 可以做
 
-1. 读取 proposal_draft.md 和 Template.docx；
+1. 读取 proposal_draft.md，验证 Template.docx 样式；
 2. 预处理 markdown（图片占位转 pandoc 语法、表格格式化）；
-3. 使用 pandoc + reference-doc 转换为 .docx；
+3. 使用 pandoc + 选定的 reference-doc 转换为 .docx；
 4. 验证输出质量（字体、样式继承、页数）；
-5. 如果 pandoc 不可用或模板缺失，给出明确的安装/修复指引。
+5. 如果 pandoc 不可用，硬阻塞并给出明确的安装指引；
+6. 如果 Template.docx 缺失或样式不完整，自动改用 skill 内置 `references/default_reference.docx`，不使用 pandoc 默认样式。
 
 ### 不允许做
 
@@ -122,9 +130,11 @@ workflow/10_review/review_result.yaml     # 确认审阅已通过（P0=0）
 pandoc --version
 ```
 
-若不可用：提示安装 `pandoc`（`sudo apt install pandoc`）。
+若不可用：**硬阻塞**，不生成 docx，提示安装 `pandoc`（`sudo apt install pandoc`）。
 
-检查 Template.docx 是否存在。若不存在：使用 pandoc 默认样式（`--standalone`），并在结果中标注。
+检查 Template.docx 是否存在。若不存在：不阻塞，直接使用 skill 内置 `references/default_reference.docx` 作为 `--reference-doc`，并在结果中标注 `template_missing: true`、`used_fallback_reference: true`。
+
+检查 skill 内置 `references/default_reference.docx` 是否存在。若 Template 缺失或样式不完整，而内置 fallback 也不存在：**硬阻塞**，不得生成 docx，避免输出落入 pandoc 默认样式。
 
 ### 6.2 Template.docx 样式验证
 
@@ -152,19 +162,26 @@ for r in required:
 | 样式 ID | Pandoc 用途 | 缺失后果 |
 |---|---|---|
 | `Normal` | 正文段落 | 无默认字体/行距 |
-| `Heading1` | `#` 一级标题 | 回退到 Calibri 蓝字 |
-| `Heading2` | `##` 二级标题 | 回退到 Calibri 蓝字 |
-| `Heading3` | `###` 三级标题 | 回退到 Calibri 蓝字 |
-| `Heading4` | `####` 四级标题 | 回退到 Calibri 蓝字 |
+| `Heading1` | `#` 一级标题 | 不使用 Template，整体改用内置 default_reference.docx |
+| `Heading2` | `##` 二级标题 | 不使用 Template，整体改用内置 default_reference.docx |
+| `Heading3` | `###` 三级标题 | 不使用 Template，整体改用内置 default_reference.docx |
+| `Heading4` | `####` 四级标题 | 不使用 Template，整体改用内置 default_reference.docx |
 
 > **注意**：Pandoc 使用的内部样式 ID 是英文的 `Normal`、`Heading1`（无空格）、`Heading2` 等。即使 Word/WPS 界面显示为"正文""标题 1"，内部 ID 不变。
 
 如果任何必需样式缺失：
-- **不阻塞**，改为使用 skill 内置的 `references/default_reference.docx` 作为 `--reference-doc`
+- **不阻塞**，但必须整体改为使用 skill 内置的 `references/default_reference.docx` 作为 `--reference-doc`
 - 内置文档包含完整的 Normal + Heading 1-4 样式（宋体正文 + 黑体/楷体标题）
 - 副作用：使用内置文档会丢失 Template.docx 的页边距、页眉页脚等自定义设置
 - 在 output_result.yaml 中标记 `template_styles_incomplete: true` 和 `used_fallback_reference: true`
 - 在最终响应中提醒用户完善 Template.docx 后重新转换可获得更好的格式效果
+
+禁止局部混用：只要 Template.docx 缺失任一必需样式，就不要继续把 Template.docx 传给 pandoc。reference-doc 只能在以下二者中二选一：
+
+1. `./references/Template.docx`：仅当 Template 存在且 `Normal`、`Heading1`、`Heading2`、`Heading3`、`Heading4` 全部存在；
+2. `{skill_dir}/references/default_reference.docx`：Template 缺失或任一必需样式缺失时使用。
+
+不得省略 `--reference-doc`，不得使用 pandoc 默认 docx 样式。
 
 #### 6.2.1 样式修复指引
 
@@ -182,9 +199,30 @@ for r in required:
 
 ### 6.3 标题编号处理
 
-**推荐路径**：先 `/grant-master:09-assemble --no-numbers`（输出干净标题），再用本阶段转 docx。Word 的 Heading 1-4 样式自带自动编号（需在 reference docx 中定义），无需在 markdown 中硬编码编号。
+标题编号由 09-assemble 根据 `template_heading_numbering` 策略处理，11-output 不再改动。
 
-如果 draft 中已含编号（如 09-assemble 默认注入的），保留不动——pandoc 会原样输出标题文字。
+策略含义：
+
+| `template_heading_numbering` | 含义 | 09 输出 | 11 行为 |
+|---|---|---|---|
+| `false` 或缺失 | reference docx 的 Heading 样式不负责自动编号 | markdown 标题已带 `1.` / `1.1` 等编号 | 原样转换 |
+| `true` | reference docx 的 Heading 样式已经绑定自动编号 | markdown 标题保持干净 | 原样转换，由 Word 样式显示编号 |
+
+默认必须视为 `false`，也就是标题编号写入 markdown。不要假设不同用户的 Template.docx 都自带自动编号。
+
+执行 11-output 时读取 `workflow/09_assemble/assemble_result.yaml` 中的 `assembly.heading_numbering_policy`。如果该字段缺失，只记录 warning，并按“09 已经产出最终 markdown”的原则原样转换，不在 11 阶段补编号或删编号。
+
+### 6.3.1 申请书标题处理
+
+09-assemble 已经负责在 `proposal_draft.md` 开头写入申请书标题，并设置为一级标题（`# 申请书标题`）。11-output 不再生成、补写或覆盖标题。
+
+执行 pandoc 时不得传入会额外生成标题页或文档开头标题的 metadata，例如：
+
+- 不使用 `--metadata title=...`
+- 不向临时 markdown 追加 YAML front matter `title: ...`
+- 不在预处理阶段手动插入新的 `# 项目名称`
+
+如果 `proposal_draft.md` 开头缺少一级标题，只在 `output_result.yaml` 中记录 warning，提示回到 09-assemble 修复；11-output 不自行补标题。
 
 ### 6.4 Markdown 预处理
 
@@ -212,9 +250,10 @@ pandoc workflow/09_assemble/proposal_draft.md \
   --from=markdown \
   --to=docx \
   --output=workflow/11_output/proposal.docx \
-  --standalone \
-  --metadata title="[项目名称]"
+  --standalone
 ```
+
+注意：不要添加 `--metadata title=...`。申请书标题已经在 09-assemble 的 markdown 正文中，重复传入 metadata 会导致输出开头出现多余标题。
 
 `--reference-doc` 参数使输出的 .docx 继承参考文档的全部样式：
 - 页面设置（页边距、纸张大小）
@@ -222,6 +261,7 @@ pandoc workflow/09_assemble/proposal_draft.md \
 - 正文样式
 - 页眉页脚
 - 若使用 fallback 文档，上述设置来自内置默认值而非用户模板
+- 若 Template 缺失或样式不完整，必须使用 fallback 文档；不得让 pandoc 使用默认 docx 样式
 
 ### 6.6 后处理验证
 
@@ -241,8 +281,9 @@ pandoc workflow/09_assemble/proposal_draft.md \
 ### 第 1 步：读取草稿和模板
 
 1. 读取 proposal_draft.md 全文
-2. 确认 Template.docx 存在且可读
-3. 检查 pandoc 可用
+2. 检查 pandoc 可用
+3. 确认 skill 内置 `references/default_reference.docx` 存在且可读
+4. 确认 Template.docx 是否存在；若存在则执行样式验证，若不存在则准备 fallback
 
 ### 第 2 步：审阅门禁检查（硬阻塞）
 
@@ -256,15 +297,15 @@ pandoc workflow/09_assemble/proposal_draft.md \
 
 ### 第 3 步：执行预处理
 
-对 proposal_draft.md 执行 §6.2 的预处理（写入临时文件 /tmp/proposal_preprocessed.md）
+对 proposal_draft.md 执行 §6.4 的预处理（写入临时文件 /tmp/proposal_preprocessed.md）。预处理不得插入新的申请书标题，不得添加 title metadata。
 
 ### 第 4 步：执行 pandoc 转换
 
-执行 §6.3 的 pandoc 命令。
+执行 §6.5 的 pandoc 命令。`REFDOC` 必须是 Template.docx 或内置 default_reference.docx，且命令中不得包含 `--metadata title=...`。
 
 ### 第 5 步：验证输出
 
-执行 §6.4 的验证，生成报告。
+执行 §6.6 的验证，生成报告。
 
 ### 第 6 步：写 output_result.yaml
 
@@ -304,11 +345,12 @@ workflow/11_output/
 
 输出文件：workflow/11_output/proposal.docx
 模板参考：references/Template.docx
+reference-doc：{references/Template.docx / skills/11-output/references/default_reference.docx}
 总页数（估算）：X 页（目标 Y 页）
 
 验证结果：
 - 文件生成：✅
-- 样式继承：✅（来自 Template.docx）
+- 样式继承：✅（来自 {Template.docx / default_reference.docx}）
 - 页数估算：X 页（偏差 Z%）
 
 用户需手动确认：
@@ -324,7 +366,10 @@ workflow/11_output/
 ## 10. 质量要求
 
 1. 不修改 proposal_draft.md 的内容；
-2. 必须使用 Template.docx 作为 reference-doc；
-3. pandoc 不可用时给出清晰的安装指引，不阻塞；
-4. P0 未解决时**硬阻塞**，不得输出 docx；
-5. 最终响应中不要执行其他 Skill。
+2. 必须先验证 Template.docx；仅当 Template 样式完整时使用 Template.docx 作为 reference-doc；
+3. Template.docx 缺失或样式不完整时，必须使用 skill 内置 `references/default_reference.docx` 作为 reference-doc；
+4. 不得省略 `--reference-doc`，不得回退到 pandoc 默认 docx 样式；
+5. 不得传入 `--metadata title=...`，不得在 11-output 重复插入申请书标题；
+6. pandoc 不可用时硬阻塞，并给出清晰的安装指引；
+7. P0 未解决时**硬阻塞**，不得输出 docx；
+8. 最终响应中不要执行其他 Skill。

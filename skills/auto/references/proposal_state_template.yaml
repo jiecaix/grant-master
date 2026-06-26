@@ -35,6 +35,12 @@ config:
     min_papers_digested: 10
     convergence_rounds: 2   # 连续 N 轮 synthesis 无本质变化
 
+  # 文档格式宏：标题编号由 markdown 注入，还是由 reference docx 的 Heading 样式自动生成
+  # false（默认）：模板标题不自带编号，09-assemble 必须向 markdown 标题注入 1 / 1.1 / 1.1.1
+  # true：模板 Heading 1-4 已绑定自动编号，09-assemble 跳过 markdown 编号注入，避免 Word 双编号
+  document_format:
+    template_heading_numbering: false
+
   mode_settings:
     collaborative:
       pause_at_gates: true

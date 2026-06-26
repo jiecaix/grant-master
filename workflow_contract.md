@@ -167,7 +167,7 @@ stage_outputs:
 
 | 分类 | 字段路径 | 写入者 | 读取者 |
 |------|---------|--------|--------|
-| **config**（不可变，启动时写入一次） | `project`, `mode_settings`, `research_loop.max_rounds`, `research_loop.auto_exit_criteria` | auto（仅初始化时） | auto + 所有 skill |
+| **config**（不可变，启动时写入一次） | `project`, `mode_settings`, `research_loop.max_rounds`, `research_loop.auto_exit_criteria`, `document_format.template_heading_numbering` | auto（仅初始化时） | auto |
 | **pipeline**（auto 写入，基于 result 文件验证后） | `stages.*.status`, `stages.*.completed_at`, `current`, `writing_loop.*` (来自 outline_state), `review_loop.*` (来自 review_result) | auto（仅验证后） | auto |
 | **evidence**（各 skill 独立写入，auto 只读） | `quality.*`, `research_loop.rounds_completed`, `research_loop.decision` | 各阶段 skill（在其 result 文件中），auto 汇总 | auto |
 
@@ -176,6 +176,7 @@ stage_outputs:
 - `research_loop.rounds_completed`：**必须由 05-synthesis 在 `synthesis_result.yaml` 中写入**，auto 只从该文件读取并同步到 ./workflow/proposal_state.yaml
 - `quality.*`：**必须由对应阶段的 skill 在 result 文件中写入**，auto 只汇总，不得自行修改
 - `stages.*.status`：auto 只有在验证 `required_outputs` 全部存在后才能标记为 `completed`
+- `config.document_format.template_heading_numbering`：默认 `false`。`false` 表示 Template/reference docx 的 Heading 样式不自带自动编号，09-assemble 必须向 markdown 标题注入编号；`true` 表示 Heading 样式已经绑定自动编号，auto 调用 09 时应传递 `--template-heading-numbering`，09 输出干净标题，避免 docx 双编号。
 
 ---
 

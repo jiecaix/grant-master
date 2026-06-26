@@ -6,14 +6,39 @@ recommended_next_stage: ""
 prerequisites:
   pandoc_available: true
   template_exists: true
+  default_reference_exists: true
   review_passed: true                  # P0_count == 0
+
+reference_doc_selection:
+  selected_reference_doc: "references/Template.docx"  # or "skills/11-output/references/default_reference.docx"
+  template_styles_checked: true
+  template_styles_complete: true
+  template_missing: false
+  template_styles_incomplete: false
+  used_fallback_reference: false
+  fallback_reason: ""                   # template_missing | missing_styles | ""
+  required_styles:
+    Normal: "present"
+    Heading1: "present"
+    Heading2: "present"
+    Heading3: "present"
+    Heading4: "present"
 
 conversion:
   source_file: "workflow/09_assemble/proposal_draft.md"
+  assemble_result_file: "workflow/09_assemble/assemble_result.yaml"
   template_file: "references/Template.docx"
+  reference_doc_used: "references/Template.docx"
   output_file: "workflow/11_output/proposal.docx"
   pandoc_command: ""
   exit_code: 0
+  title_injected_by_11_output: false     # must remain false; 09-assemble owns the title
+  metadata_title_used: false             # must remain false; no --metadata title=...
+  heading_numbering_policy:
+    template_heading_numbering: false
+    source: "assemble_result"            # assemble_result / missing_assume_markdown_final
+    markdown_numbers_expected: true
+    modified_by_11_output: false         # must remain false; 11 does not add/remove heading numbers
 
 verification:
   file_size_bytes: 0
@@ -25,6 +50,13 @@ verification:
       status: "pass"
     - check: "样式继承"
       status: "pass"
+      note: "来自 reference_doc_used；不得使用 pandoc 默认 docx 样式"
+    - check: "标题未重复注入"
+      status: "pass"
+      note: "11-output 不添加 title metadata，不插入新的一级标题"
+    - check: "标题编号策略"
+      status: "pass"
+      note: "来自 assemble_result.yaml；11-output 不重新决定标题编号"
     - check: "中文编码"
       status: "needs_manual_check"
       note: "请在 Word 中打开确认中文未乱码"
