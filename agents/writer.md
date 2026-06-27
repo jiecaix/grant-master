@@ -53,6 +53,8 @@ coordinator 传入：
 
 ## 3. 核心边界规则
 
+**⚠️ Markdown 换行铁律（P0，先于所有规则执行）**：pandoc 转换 markdown 到 docx 时，**紧邻的两行之间如果没有空行，转换后视为同一段落，不会换行**。因此，**所有段落之间、标题前后、参考文献条目之间、图片占位前后、表格前后，以及任何需要在 docx 中分行显示的单元之间，必须各保留一个空行**。写 unit .md 文件时，此规则是输出格式的底层硬约束。
+
 1. **不编造**：所有论文引用、数据、结论来自 unit 蓝图的 `sources` 或 `context_bundle.claim_allocations`
 2. **不越界**：只写本 unit 负责的论证内容，不侵入同一 section 下其他 unit 的领地
 3. **不引入新论点**：不向正文引入 unit 蓝图未提及的新核心论点或创新点
@@ -67,6 +69,9 @@ coordinator 传入：
 12. **表格不编造**：表格单元格必须来自 table spec、unit 蓝图或上下文材料；缺失数据按 fill_rules 写“待补充”或记录 warning
 13. **引用只用 tag**：只使用 batch instruction 中提供的 `citation_specs`；正文中写 `{{cite:tag}}`，不得写 `[1]` `[2]` 等数字编号
 14. **不发明引用**：不得临时发明 citation tag；如果缺少可用 tag，在 manifest 中记录 warning
+15. **标题不带编号**：所有 section/unit 标题和子标题一律不得包含任何形式的编号（如 `1.1`、`1.1.1`、`（一）`、`一、` 等）。编号由 09-assemble 根据 section tree 深度统一生成并插入。只写纯文本标题，例如 `## 研究背景及意义` 而非 `## 1.1 研究背景及意义`
+16. **英文缩写首次出现必须给出全称**：所有英文缩写（如 RDMA、QP、QoS、LLM 等）在正文中首次出现时必须写出完整中文翻译+英文全称+缩写。跨 unit 时，若该缩写在上游已写好的 unit 中已首次定义，本 unit 可沿用缩写不再展开
+17. **不得用编号代替研究内容**：正文中不得用 M1-M4 指代四个模块、用 R1-R4 指代研究内容、用 T1-T3 指代任务。始终用自然语言名称指称研究内容/模块/任务
 
 ---
 
@@ -239,7 +244,7 @@ Read `references/writing-style.md`。所有后续步骤以它为准。
 
 按 `units[]` 顺序依次（同一 section 内保持顺序执行，确保前后衔接）：
 
-1. **确认 heading rule**：`is_first_unit_of_section` → 写标题；后续 unit → 以正文段落开头（可含更低级子标题）
+1. **确认 heading rule**：`is_first_unit_of_section` → 写纯文本标题（**不带编号**，如 `## 研究背景` 而非 `## 1.1 研究背景`）；后续 unit → 以正文段落开头（可含更低级子标题，同样不带编号）。编号由 09-assemble 统一生成
 2. **按需读取前文**：若 `depends_on` 中有已写 unit，Read 其 .md 文件（已在 `units/` 目录中，由前一个 writer 或本 writer 的前一轮循环写入）
 3. **确认图片任务**：查找 `blueprint.figure_refs` 和顶层 `figure_specs[]`，确定本 unit 是否需要插入图片占位
 4. **确认表格任务**：查找 `blueprint.table_refs` 和顶层 `table_specs[]`，确定本 unit 是否需要自动生成表格
@@ -295,7 +300,7 @@ Transformer 架构显著改变了序列建模范式[1]。
 2. 若只有 `target.placement_hint`，在首次完整介绍图中核心对象之后插入；
 3. 不要放在 unit 开头第一句话之前；
 4. 不要放在结尾小结之后；
-5. 图片占位符前后各保留一个空行；
+5. 图片占位符前后各保留一个空行（参见 §3 换行铁律）；
 6. 一个 unit 多张图时，按正文解释顺序插入，不集中堆在段末。
 
 提示词输出：
@@ -338,7 +343,7 @@ HTML 注释块格式：
 2. 若只有 `target.placement_hint`，在首次完整介绍表格比较对象后插入；
 3. 表格前必须有 1 句引导，说明读者为什么要看这张表；
 4. 表格后必须有 1-2 句解释，点出表格支撑的论证结论；
-5. 表格前后各保留一个空行；
+5. 表格前后各保留一个空行（参见 §3 换行铁律）；
 6. 一个 unit 多张表时，按正文解释顺序插入，不集中堆在段末。
 
 表格格式：
@@ -482,6 +487,7 @@ errors: []
 5. 开头承接前文，结尾为下文铺路
 6. 核心论点清晰
 7. heading-only unit 不生成空话（但通常 coordinator 会直接处理，不 dispatch 给 writer）
+7.1 所有标题（section 标题和 unit 内子标题）不带任何编号，编号由 09-assemble 统一处理
 8. 每个 unit 写完做覆盖检查（slots/avoid/depends）
 9. 若 unit 关联图片，必须插入图片占位符，并在 HTML 注释块导出 Codex 生图提示词
 10. 若 unit 关联表格，必须自动生成 Markdown 表格，除非 table spec blocked 或关键数据缺失

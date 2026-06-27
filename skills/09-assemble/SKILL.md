@@ -156,7 +156,9 @@ S01
 
 拼接时先写入一级标题 `# 申请书名称`（来源见 §6.1），再按 DFS 顺序拼接各 unit。
 
-每个 unit .md 文件的内容直接拼接。section 之间插入一个空行。unit 之间不额外插入分隔符（因为相邻 unit 的过渡已在写作时处理）。
+每个 unit .md 文件的内容直接拼接。
+
+**⚠️ Markdown 换行铁律（P0，组装时必须确保）**：pandoc 转换 markdown 到 docx 时，**紧邻的两行之间如果没有空行，转换后视为同一段落，不会换行**。组装 `proposal_draft.md` 时必须确保：section 之间插入空行、参考文献每条之间插入空行、参考文献块前后各一个空行、所有标题前后各一个空行、任何需要在 docx 中独立成段的单元前后各一个空行。组装完成后必须全扫描确认没有紧邻的独立单元（段落、标题、参考文献条目、表格、图片占位）之间缺少空行。
 
 **标题编号策略宏**：`template_heading_numbering` 表示最终使用的 reference docx 的 Heading 1-4 样式是否自带自动编号。
 
@@ -309,18 +311,22 @@ HTML('/tmp/proposal_full.html').write_pdf('workflow/09_assemble/proposal_draft.p
 
 参考文献列表生成：
 
-1. 默认把参考文献列表插入到“背景”“研究意义”“国内外研究现状”“研究现状”等相关 section 结束后；
+1. 默认把参考文献列表插入到”背景””研究意义””国内外研究现状””研究现状”等相关 section 结束后；
 2. 如果同时存在背景和研究现状，优先插入到最后一个研究现状相关 section 结束后；
 3. 如果找不到相关 section，则在全文末尾追加 `## 参考文献`；
 4. 参考文献标题层级应比插入位置所在 section 低一级；若无法判断，使用 `## 参考文献`；
-5. 参考文献条目使用 `citation_plan.yaml` 中的 `reference_text`，并加上 09 分配的编号：
-6. “参考文献”标题是自动插入的附录性标题，不参与正文 section tree 的 heading_number 安全网，也不要求注入 section 编号。
+5. 参考文献条目使用 `citation_plan.yaml` 中的 `reference_text`，并加上 09 分配的编号；
+6. **参考文献的空行规则**：参见 §6.2 换行铁律——每条参考文献条目之间必须有空行、参考文献标题前和最后一条条目后各有一个空行。违反将导致 docx 中参考文献全部挤成一段或后续标题被吃掉；
+7. “参考文献”标题是自动插入的附录性标题，不参与正文 section tree 的 heading_number 安全网，也不要求注入 section 编号。
 
 ```markdown
 ### 参考文献
 
 [1] Vaswani A, Shazeer N, Parmar N, et al. Attention Is All You Need. NeurIPS, 2017.
+
 [2] Devlin J, Chang M W, Lee K, Toutanova K. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. NAACL, 2019.
+
+<!-- 后续内容：最后一条参考文献后必须有空行，否则下一个 ### 标题会被 pandoc 当作普通文本 -->
 ```
 
 ---
@@ -361,7 +367,9 @@ HTML('/tmp/proposal_full.html').write_pdf('workflow/09_assemble/proposal_draft.p
 | 同一 claim 在不同 unit 中表述是否一致 | 从 context_bundle 的 claim_allocations 中提取跨 unit 的 claim，对比各 unit 中该 claim 的表述 | warning（偏差 > 30% 语义相似度扣 P1） |
 | 论证链各步骤是否都有对应正文 | 从 context_bundle.argument_chain 提取步骤，在 draft 中搜索对应的 section，检查是否有空壳（只有标题无实质内容） | error（缺失扣 P0） |
 | citation tag 是否全部被替换 | 搜索 `{{cite:`，检查是否仍有未替换 tag | warning（未知 tag） |
-| 参考文献列表是否生成 | 检查出现过 citation tag 时是否生成“参考文献”小节 | warning |
+| 参考文献列表是否生成 | 检查出现过 citation tag 时是否生成”参考文献”小节 | warning |
+| 参考文献条目间是否有空行 | 检查参考文献小节内每条 `[n]` 条目之间是否都有空白行分隔（参见 §6.2 换行铁律） | error（无空行会导致 docx 中参考文献全部合并为一段） |
+| 全文中独立单元间是否缺少空行 | 扫描全文，确认所有段落、标题、表格、图片占位等独立单元之间均不紧邻（参见 §6.2 换行铁律） | error（违反换行铁律会导致 docx 输出内容挤在一起） |
 
 此检查在 09-assemble 执行——因为只有全部 unit 组装后才能看到跨 unit 的连贯性。检查结果写入 `assemble_report.md`。
 
@@ -488,4 +496,5 @@ workflow/09_assemble/
 6. PDF 生成为可选（weasyprint 不可用时跳过，不阻塞）；
 7. PDF 生成前必须检查 weasyprint 可用性，不可用时给出清晰提示；
 8. 必须处理 citation tag：已知 tag 替换为数字编号，未知 tag 写入 warning；
-9. 最终响应中不要执行其他 Skill。
+9. 组装输出必须遵守 §6.2 换行铁律：拼接后扫描确认所有独立单元（段落、标题、参考文献、表格、图片）间有空行；
+10. 最终响应中不要执行其他 Skill。

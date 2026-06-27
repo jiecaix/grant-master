@@ -1,0 +1,35 @@
+{
+  "name": "grant-master",
+  "version": "0.1.0",
+  "description": "中文项目申请书全流程自动撰写插件，覆盖课题理解、文献调研、方案收敛、大纲规划、正文写作、组装审阅与 docx 输出。",
+  "author": {
+    "name": "lin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "grant",
+    "proposal",
+    "academic-writing",
+    "nsfc",
+    "chinese"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Grant Master",
+    "shortDescription": "中文项目申请书全流程写作工具链。",
+    "longDescription": "从课题理解、文献调研规划、学术搜索、论文精读、综合分析、方案收敛、大纲与体量规划，到逐单元正文写作、草稿组装、全局审阅和 docx 输出的完整工作流。",
+    "developerName": "lin",
+    "category": "Productivity",
+    "capabilities": [
+      "Write",
+      "Research",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "使用 grant-master:auto 推进申请书工作流",
+      "使用 grant-master:08-section-write 写作正文单元",
+      "使用 grant-master:10-review 审阅申请书草稿"
+    ],
+    "brandColor": "#2563EB"
+  }
+}
