@@ -1,0 +1,29 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Logs and local env
+*.log
+.env
+.env.*
+!.env.example
+
+# Dependencies / caches
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Demo local rerun downloads that should not be committed by default.
+/demo/papers/
+
+# Temporary downloads and partial files
+*.part
+*.tmp
