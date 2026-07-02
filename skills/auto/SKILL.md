@@ -341,4 +341,4 @@ auto 在推进 stage 时必须执行连续性检查：
 10. **阶段连续性**：检测到非法跳跃立即阻塞（§8.2）；
 11. **min_rounds 约束**：调研轮次未达 min_rounds 不得跳出（§5.2）；
 12. **上下文压力不得作为跳阶段理由**：遵守 degradation_policy（§8.1）；
-13. 本 Skill 和所有阶段 Skill 必须遵守 `workflow_contract.md`。
+13. 本 Skill 和所有阶段 Skill 必须遵守 `docs/workflow-contract.md`。
